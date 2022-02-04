@@ -1,1 +1,2 @@
-- environments: $(DATABASE_URL)
+- environments: 
+  DATABASE_URL: ${DATABASE_URL}
