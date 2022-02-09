@@ -1,19 +1,23 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"strings"
 )
 
 func Main(args map[string]interface{}) map[string]interface{} {
+	// databaseURL := os.Getenv("DATABASE_URL")
+	// if databaseURL == "" {
+	// 	return wrapErr(errors.New("DATABASE_URL is not set"))
+	// }
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		return wrapErr(errors.New("DATABASE_URL is not set"))
-	}
-
-	return wrapHTML("body string")
+	return wrapHTML(fmt.Sprintf(
+		"PROJECT_LEVEL: %q\nPACKAGE_LEVEL: %q\nACTION_LEVEL: %q\n",
+		os.Getenv("PROJECT_LEVEL"),
+		os.Getenv("PACKAGE_LEVEL"),
+		os.Getenv("ACTION_LEVEL"),
+	))
 }
 
 func wrapErr(err error, wrap ...string) map[string]interface{} {
