@@ -1,8 +1,10 @@
 environment:
-  DATABASE_URL: NOPE
+  PROJECT_LEVEL: PROJECT_LEVEL
 packages:
   - name: default
+    environment:
+      PACKAGE_LEVEL: PACKAGE_LEVEL
     actions:
       - name: concurrency
         environment:
-          "DATABASE_URL": YAAS
+          ACTION_LEVEL: ACTION_LEVEL
