@@ -1,2 +1,8 @@
 environment:
   DATABASE_URL: NOPE
+packages:
+  - name: default
+    actions:
+      - name: concurrency
+        environment:
+          "DATABASE_URL": YAAS
