@@ -113,7 +113,7 @@ func initDB(ctx context.Context, db *sql.DB) error {
 	return err
 }
 
-func inc(ctx context.Context, db *sql.DB, testName string) (current, peak, total int, err error) {
+func inc(ctx context.Context, db *sql.DB, testName string) (active, peak, total int, err error) {
 	err = db.QueryRowContext(ctx, `
 	INSERT INTO concurrency 
 		VALUES ($1, 1, 1, 1)
@@ -121,9 +121,9 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak, total
 		DO UPDATE SET 
 			con_active = concurrency.con_active + 1,
 			con_total = concurrency.con_total + 1,
-			con_peak = GREATEST(concurrency.con_peak, concurrency.con_active)
+			con_peak = GREATEST(concurrency.con_peak, concurrency.con_active + 1)
 		RETURNING con_active, con_peak, con_total
-	`, testName).Scan(&current, &peak, &total)
+	`, testName).Scan(&active, &peak, &total)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("inserting: %w", err)
 	}
