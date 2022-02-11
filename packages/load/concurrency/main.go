@@ -44,21 +44,21 @@ func Main(args map[string]interface{}) map[string]interface{} {
 	var active, peak int
 	var pgErr *pq.Error
 	if active, peak, err = inc(ctx, db, testName); err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "42702" {
-			err = initDB(ctx, db)
-			if err != nil {
-				if errors.As(err, &pgErr) {
-					wrapErr(err, "initing database: error code"+string(pgErr.Code))
-				}
-				return wrapErr(err, "initing database")
-			}
-			active, peak, err = inc(ctx, db, testName)
-			if err != nil {
-				return wrapErr(err, "incrementing after create")
-			}
-		} else {
-			return wrapErr(err, "incrementing")
-		}
+		// if errors.As(err, &pgErr) && pgErr.Code == "42702" {
+		// 	err = initDB(ctx, db)
+		// 	if err != nil {
+		// 		if errors.As(err, &pgErr) {
+		// 			wrapErr(err, "initing database: error code"+string(pgErr.Code))
+		// 		}
+		// 		return wrapErr(err, "initing database")
+		// 	}
+		// 	active, peak, err = inc(ctx, db, testName)
+		// 	if err != nil {
+		// 		return wrapErr(err, "incrementing after create")
+		// 	}
+		// } else {
+		return wrapErr(err, "incrementing")
+		// }
 	}
 	if err = dec(ctx, db, testName); err != nil {
 		return wrapErr(err, "decrementing")
