@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/xo/dburl"
@@ -26,7 +27,13 @@ func Main(args map[string]interface{}) map[string]interface{} {
 	// Open a DB connection.
 	dbPassword, _ := dbURL.User.Password()
 	dbName := strings.Trim(dbURL.Path, "/")
-	connectionString := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s", dbURL.Hostname(), dbURL.Port(), dbURL.User.Username(), dbName, dbPassword, dbURL.Query().Get("sslmode"))
+	connectionString := fmt.Sprintf(
+		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+		dbURL.Hostname(),
+		dbURL.Port(),
+		dbURL.User.Username(),
+		dbName, dbPassword,
+		dbURL.Query().Get("sslmode"))
 
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
@@ -40,36 +47,44 @@ func Main(args map[string]interface{}) map[string]interface{} {
 		testName = "default"
 	}
 
-	ctx := context.Background()
-	var active, peak int
-	var pgErr *pq.Error
-	if active, peak, err = inc(ctx, db, testName); err != nil {
-		// if errors.As(err, &pgErr) && pgErr.Code == "42702" {
-		// 	err = initDB(ctx, db)
-		// 	if err != nil {
-		// 		if errors.As(err, &pgErr) {
-		// 			wrapErr(err, "initing database: error code"+string(pgErr.Code))
-		// 		}
-		// 		return wrapErr(err, "initing database")
-		// 	}
-		// 	active, peak, err = inc(ctx, db, testName)
-		// 	if err != nil {
-		// 		return wrapErr(err, "incrementing after create")
-		// 	}
-		// } else {
-		return wrapErr(err, "incrementing")
-		// }
+	var wait time.Duration
+	if waitString, _ := args["wait"].(string); waitString != "" {
+		wait, err = time.ParseDuration(waitString)
+		if err != nil {
+			return wrapErr(err, "parsing duration")
+		}
 	}
+
+	ctx := context.Background()
+	var active, peak, total int
+	var pgErr *pq.Error
+	if active, peak, total, err = inc(ctx, db, testName); err != nil {
+		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
+			err = initDB(ctx, db)
+			if err != nil {
+				if errors.As(err, &pgErr) {
+					wrapErr(err, "initing database: error code"+string(pgErr.Code))
+				}
+				return wrapErr(err, "initing database")
+			}
+			active, peak, total, err = inc(ctx, db, testName)
+			if err != nil {
+				return wrapErr(err, "incrementing after create")
+			}
+		} else {
+			return wrapErr(err, "incrementing")
+		}
+	}
+
+	if wait != 0 {
+		time.Sleep(wait)
+	}
+
 	if err = dec(ctx, db, testName); err != nil {
 		return wrapErr(err, "decrementing")
 	}
 
-	var additional string
-	if pgErr != nil {
-		additional = fmt.Sprintf("%v", pgErr.Code)
-	}
-
-	return wrapHTML(fmt.Sprintf("active=%d<br>peak=%d<br>%s", active, peak, additional))
+	return wrapHTML(fmt.Sprintf("active=%d<br>peak=%d<br>total=%d", active, peak, total))
 }
 
 func wrapErr(err error, wrap ...string) map[string]interface{} {
@@ -91,40 +106,27 @@ func initDB(ctx context.Context, db *sql.DB) error {
 		test_name    varchar(40) NOT NULL,
 		con_active   integer NOT NULL,
 		con_peak     integer NOT NULL,
+		con_total    integer NOT NULL
 		PRIMARY KEY (test_name)
 	);
 	`)
 	return err
 }
 
-func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, err error) {
-	// tx, err := db.BeginTx(ctx, nil)
-	// if err != nil {
-	// 	return 0, 0, fmt.Errorf("beginning tx: %w", err)
-	// }
-	// defer func() {
-	// 	if err != nil {
-	// 		tx.Rollback()
-	// 	}
-	// 	err = tx.Commit()
-	// }()
+func inc(ctx context.Context, db *sql.DB, testName string) (current, peak, total int, err error) {
 	err = db.QueryRowContext(ctx, `
 	INSERT INTO concurrency 
 		VALUES ($1, 1, 1)
 		ON CONFLICT (test_name)
-		DO UPDATE SET con_active = concurrency.con_active + 1, con_peak = MAX(concurrency.con_peak, concurrency.con_active) RETURNING con_active, con_peak
-	`, testName).Scan(&current, &peak)
+		DO UPDATE SET 
+			con_active = concurrency.con_active + 1,
+			con_total = concurrency.con_total + 1,
+			con_peak = GREATEST(concurrency.con_peak, concurrency.con_active)
+		RETURNING con_active, con_peak
+	`, testName).Scan(&current, &peak, &total)
 	if err != nil {
-		return 0, 0, fmt.Errorf("inserting: %w", err)
+		return 0, 0, 0, fmt.Errorf("inserting: %w", err)
 	}
-	// err = tx.QueryRowContext(
-	// 	ctx,
-	// 	`SELECT con_active, con_peak FROM concurrency WHERE test_name = $1`,
-	// 	testName,
-	// ).Scan(&current, &peak)
-	// if err != nil {
-	// 	return 0, 0, fmt.Errorf("querying: %w", err)
-	// }
 	return
 }
 
