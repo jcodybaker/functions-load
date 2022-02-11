@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	_ "github.com/lib/pq"
+	"github.com/xo/dburl"
 )
 
 func Main(args map[string]interface{}) map[string]interface{} {
@@ -18,7 +19,7 @@ func Main(args map[string]interface{}) map[string]interface{} {
 
 	dbURL, err := dburl.Parse(databaseURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing DATABASE_URL")
+		return wrapErr(err, "parsing DATABASE_URL")
 	}
 
 	// Open a DB connection.
@@ -51,32 +52,4 @@ func wrapHTML(body string) map[string]interface{} {
 	return map[string]interface{}{
 		"body": "<html><body><pre>" + string(body) + "</pre></body></html>",
 	}
-}
-
-func initialMigration(db *gorm.DB) {
-	db.AutoMigrate(&model.Note{})
-}
-
-// Get gets a Note from the DB
-func (p *PG) Get(id string) (*model.Note, error) {
-	var note model.Note
-	err := p.DB.Where("uuid = ?", id).Take(&note).Error
-	if gorm.IsRecordNotFoundError(err) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "getting note from db")
-	}
-
-	return &note, nil
-}
-
-// Create creates a note
-func (p *PG) Create(note *model.Note) error {
-	err := p.DB.Create(note).Error
-	if err != nil {
-		return errors.Wrap(err, "creating note in db")
-	}
-
-	return nil
 }
