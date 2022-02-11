@@ -1,0 +1,25 @@
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+databases:
+- engine: PG
+  name: db
+  num_nodes: 1
+  size: db-s-dev-database
+  version: "12"
+name: func-load
+region: nyc
+functions:
+- envs:
+  - key: DATABASE_URL
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:Pe0wctyST88R41X0y5T5yrLNy3S8gpWk:Yvzu5TpRpxtK5TiEMqmP5mGFz2ag2FkqFNfcdAp3WxzhIXcrFKufKr8HTETXtv49k3h/kN6WChgYnIvw6UoJzsGeojfKfiXoyzyHjeF1qsk9oZqnXYNGB2DWRzs9cTNFQ6Y86b453VETHS4N+e3vQAjLLQOcsHIZVJf/cpzTmA3g+0eLnMdhyR3B8+CRV/M/inaWMLEB4s6S0hc2]
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: jcodybaker/functions-load
+  name: load
+  routes:
+  - path: /
+  source_dir: /

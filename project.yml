@@ -5,6 +5,16 @@ packages:
     environment:
       PACKAGE_LEVEL: PACKAGE_LEVEL
     actions:
-      - name: concurrency
+      - name: vars
         environment:
           ACTION_LEVEL: ACTION_LEVEL
+  - name: default
+    environment:
+      PACKAGE_LEVEL: PACKAGE_LEVEL
+    actions:
+      - name: vars
+        environment:
+          ACTION_LEVEL: ACTION_LEVEL
+  - name: load
+    environment:
+      DATABASE_URL: "${DATABASE_URL}"

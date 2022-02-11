@@ -1,0 +1,4 @@
+# github.com/lib/pq v1.10.4
+## explicit; go 1.13
+# github.com/xo/dburl v0.9.0
+## explicit; go 1.17
