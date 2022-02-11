@@ -116,7 +116,7 @@ func initDB(ctx context.Context, db *sql.DB) error {
 func inc(ctx context.Context, db *sql.DB, testName string) (current, peak, total int, err error) {
 	err = db.QueryRowContext(ctx, `
 	INSERT INTO concurrency 
-		VALUES ($1, 1, 1)
+		VALUES ($1, 1, 1, 1)
 		ON CONFLICT (test_name)
 		DO UPDATE SET 
 			con_active = concurrency.con_active + 1,
