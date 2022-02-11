@@ -106,7 +106,7 @@ func initDB(ctx context.Context, db *sql.DB) error {
 		test_name    varchar(40) NOT NULL,
 		con_active   integer NOT NULL,
 		con_peak     integer NOT NULL,
-		con_total    integer NOT NULL
+		con_total    integer NOT NULL,
 		PRIMARY KEY (test_name)
 	);
 	`)
