@@ -97,7 +97,7 @@ func initDB(ctx context.Context, db *sql.DB) error {
 func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, err error) {
 	_, err = db.ExecContext(ctx, `
 	INSERT INTO concurrency 
-		VALUES (?, 1, 1)
+		VALUES ($1, 1, 1)
 		ON CONFLICT (test_name)
 		DO UPDATE SET con_active = con_active + 1, con_peak = MAX(con_peak, con_active);
 	`, testName)
@@ -106,7 +106,7 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, e
 	}
 	err = db.QueryRowContext(
 		ctx,
-		`SELECT con_active, con_peak FROM concurrency WHERE test_name = ?`,
+		`SELECT con_active, con_peak FROM concurrency WHERE test_name = $1`,
 		testName,
 	).Scan(&current, &peak)
 	if err != nil {
@@ -117,7 +117,7 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, e
 
 func dec(ctx context.Context, db *sql.DB, testName string) error {
 	_, err := db.ExecContext(ctx, `
-	UPDATE concurrency SET con_active = con_active - 1 WHERE test_name = ?;
+	UPDATE concurrency SET con_active = con_active - 1 WHERE test_name = $1;
 	`, testName)
 	if err != nil {
 		return fmt.Errorf("decrementing: %w", err)
