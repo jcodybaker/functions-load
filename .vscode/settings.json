@@ -1,0 +1,6 @@
+{
+    "go.toolsEnvVars": {
+        "GOFLAGS": "-mod=vendor",
+        "GO111MODULE": "on"
+    }
+}
