@@ -125,7 +125,7 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, e
 	// if err != nil {
 	// 	return 0, 0, fmt.Errorf("querying: %w", err)
 	// }
-	// return
+	return
 }
 
 func dec(ctx context.Context, db *sql.DB, testName string) error {
