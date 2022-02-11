@@ -44,10 +44,10 @@ func Main(args map[string]interface{}) map[string]interface{} {
 	var active, peak int
 	var pgErr *pq.Error
 	if active, peak, err = inc(ctx, db, testName); err != nil {
-		if errors.As(err, &pgErr) { // TODO - add not found code
+		if errors.As(err, &pgErr) && pgErr.Code == "42702" { // TODO - add not found code
 			err = initDB(ctx, db)
 			if err != nil {
-				return wrapErr(err, fmt.Sprintf("initing database, code: %v", pgErr.Code))
+				return wrapErr(err, "initing database")
 			}
 			active, peak, err = inc(ctx, db, testName)
 			if err != nil {
