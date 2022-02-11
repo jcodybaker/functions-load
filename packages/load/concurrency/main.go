@@ -44,7 +44,7 @@ func Main(args map[string]interface{}) map[string]interface{} {
 	var active, peak int
 	var pgErr *pq.Error
 	if active, peak, err = inc(ctx, db, testName); err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "42702" { // TODO - add not found code
+		if errors.As(err, &pgErr) && pgErr.Code != "42702" { // TODO - add not found code
 			err = initDB(ctx, db)
 			if err != nil {
 				return wrapErr(err, "initing database")
@@ -95,7 +95,17 @@ func initDB(ctx context.Context, db *sql.DB) error {
 }
 
 func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, err error) {
-	_, err = db.ExecContext(ctx, `
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, fmt.Errorf("beginning tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+	_, err = tx.ExecContext(ctx, `
 	INSERT INTO concurrency 
 		VALUES ($1, 1, 1)
 		ON CONFLICT (test_name)
@@ -104,7 +114,7 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, e
 	if err != nil {
 		return 0, 0, fmt.Errorf("inserting: %w", err)
 	}
-	err = db.QueryRowContext(
+	err = tx.QueryRowContext(
 		ctx,
 		`SELECT con_active, con_peak FROM concurrency WHERE test_name = $1`,
 		testName,
