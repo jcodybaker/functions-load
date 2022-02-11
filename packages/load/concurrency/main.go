@@ -122,7 +122,7 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak, total
 			con_active = concurrency.con_active + 1,
 			con_total = concurrency.con_total + 1,
 			con_peak = GREATEST(concurrency.con_peak, concurrency.con_active)
-		RETURNING con_active, con_peak
+		RETURNING con_active, con_peak, con_total
 	`, testName).Scan(&current, &peak, &total)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("inserting: %w", err)
