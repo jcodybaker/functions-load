@@ -112,7 +112,7 @@ func inc(ctx context.Context, db *sql.DB, testName string) (current, peak int, e
 	INSERT INTO concurrency 
 		VALUES ($1, 1, 1)
 		ON CONFLICT (test_name)
-		DO UPDATE SET con_active = con_active + 1, con_peak = MAX(con_peak, con_active) RETURNING con_active, con_peak
+		DO UPDATE SET con_active = concurrency.con_active + 1, con_peak = MAX(concurrency.con_peak, concurrency.con_active) RETURNING con_active, con_peak
 	`, testName).Scan(&current, &peak)
 	if err != nil {
 		return 0, 0, fmt.Errorf("inserting: %w", err)
