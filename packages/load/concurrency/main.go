@@ -13,7 +13,10 @@ import (
 	"github.com/xo/dburl"
 )
 
-func Main(args map[string]interface{}) map[string]interface{} {
+const codeTableNotFound pq.ErrorCode = "42P01"
+
+func Main(args map[string]interface{}) (out map[string]interface{}) {
+	ctx := context.Background()
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		return wrapErr(errors.New("DATABASE_URL is not set"))
@@ -55,11 +58,18 @@ func Main(args map[string]interface{}) map[string]interface{} {
 		}
 	}
 
-	ctx := context.Background()
-	var active, peak, total int
 	var pgErr *pq.Error
+
+	if _, r := args["reset"]; r {
+		if err = reset(ctx, db, testName); err != nil {
+			if errors.As(err, &pgErr) && pgErr.Code != codeTableNotFound {
+				return wrapErr(err, "")
+			}
+		}
+	}
+	var active, peak, total int
 	if active, peak, total, err = inc(ctx, db, testName); err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
+		if errors.As(err, &pgErr) && pgErr.Code == codeTableNotFound {
 			err = initDB(ctx, db)
 			if err != nil {
 				if errors.As(err, &pgErr) {
@@ -76,15 +86,20 @@ func Main(args map[string]interface{}) map[string]interface{} {
 		}
 	}
 
+	defer func() {
+		if decErr := dec(ctx, db, testName); decErr != nil && err == nil {
+			// Always try to decrement, but we'll only display this error if there isn't already
+			// an err. This requires some diligence about not shaddowing `err` by declaring it in
+			// child scopes.
+			out = wrapErr(decErr, "decrementing")
+		}
+	}()
+
 	if wait != 0 {
 		time.Sleep(wait)
 	}
 
-	if err = dec(ctx, db, testName); err != nil {
-		return wrapErr(err, "decrementing")
-	}
-
-	return wrapHTML(fmt.Sprintf("active=%d<br>peak=%d<br>total=%d", active, peak, total))
+	return wrapHTML(fmt.Sprintf("active=%d<br>peak=%d<br>total=%d<br>wait=%s", active, peak, total, wait.String()))
 }
 
 func wrapErr(err error, wrap ...string) map[string]interface{} {
@@ -132,10 +147,18 @@ func inc(ctx context.Context, db *sql.DB, testName string) (active, peak, total 
 
 func dec(ctx context.Context, db *sql.DB, testName string) error {
 	_, err := db.ExecContext(ctx, `
-	UPDATE concurrency SET con_active = con_active - 1 WHERE test_name = $1;
+	UPDATE concurrency SET con_active = con_active - 1 WHERE test_name = $1
 	`, testName)
 	if err != nil {
 		return fmt.Errorf("decrementing: %w", err)
+	}
+	return nil
+}
+
+func reset(ctx context.Context, db *sql.DB, testName string) error {
+	_, err := db.ExecContext(ctx, `DELETE FROM concurrency WHERE test_name = $1`, testName)
+	if err != nil {
+		return fmt.Errorf("resetting: %w", err)
 	}
 	return nil
 }
