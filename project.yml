@@ -6,7 +6,7 @@ packages:
       PACKAGE_LEVEL: PACKAGE_LEVEL
     actions:
       - name: vars
-        runtime: go
+        runtime: go:default
         environment:
           ACTION_LEVEL: ACTION_LEVEL
   - name: load
